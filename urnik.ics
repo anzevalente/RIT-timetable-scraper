@@ -1,1 +1,20 @@
-error
+Napaka: Message: 
+Stacktrace:
+#0 0x55f3f2b6b4ba <unknown>
+#1 0x55f3f25d4492 <unknown>
+#2 0x55f3f26299b6 <unknown>
+#3 0x55f3f2629bf1 <unknown>
+#4 0x55f3f26754d4 <unknown>
+#5 0x55f3f2672700 <unknown>
+#6 0x55f3f261b6a2 <unknown>
+#7 0x55f3f261c491 <unknown>
+#8 0x55f3f2b31479 <unknown>
+#9 0x55f3f2b34391 <unknown>
+#10 0x55f3f2b1da89 <unknown>
+#11 0x55f3f2b34f4e <unknown>
+#12 0x55f3f2b04070 <unknown>
+#13 0x55f3f2b58ca8 <unknown>
+#14 0x55f3f2b58e78 <unknown>
+#15 0x55f3f2b6a828 <unknown>
+#16 0x7f394a49caa4 <unknown>
+#17 0x7f394a529c6c <unknown>
