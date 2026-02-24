@@ -1,6 +1,6 @@
 import requests
 
-# Direktni link za RIT VS 1. letnik
+# Prepričaj se, da je link točno tak (brez presledkov na koncu)
 URL = "https://wise-tt.com/wtt_um_feri/rest/ical/v2/group/RIT_VS_1"
 
 def download():
@@ -8,9 +8,10 @@ def download():
     try:
         r = requests.get(URL, headers=headers)
         if r.status_code == 200:
+            # Ta vrstica ustvari datoteko
             with open("urnik.ics", "wb") as f:
                 f.write(r.content)
-            print("Urnik uspesno prenesen!")
+            print("Urnik uspesno prenesen in shranjen v urnik.ics!")
         else:
             print(f"Napaka na strezniku: {r.status_code}")
     except Exception as e:
