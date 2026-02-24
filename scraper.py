@@ -13,70 +13,52 @@ def download_urnik():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Nastavitev mape za prenos
     download_path = os.getcwd()
-    prefs = {
-        "download.default_directory": download_path,
-        "download.prompt_for_download": False,
-    }
+    prefs = {"download.default_directory": download_path}
     chrome_options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(options=chrome_options)
     
     try:
-        print("Odpiram Wise Timetable...")
         driver.get("https://wise-tt.com/wtt_um_feri/")
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 25)
         
-        # 1. Klik na program
-        print("Iščem program: RAČUNALNIŠTVO IN INFORMACIJSKE TEHNOLOGIJE VS (BV20)")
-        # Ta XPath najde tabelo (td), ki vsebuje točno to besedilo
-        program_xpath = "//td[contains(text(), 'RAČUNALNIŠTVO IN INFORMACIJSKE TEHNOLOGIJE VS (BV20)')]"
+        # 1. Iskanje programa - uporabila bova blažji filter
+        print("Iščem program...")
+        program_xpath = "//td[contains(text(), 'RAČUNALNIŠTVO') and contains(text(), 'BV20')]"
         program_btn = wait.until(EC.element_to_be_clickable((By.XPATH, program_xpath)))
-        
-        driver.execute_script("arguments[0].scrollIntoView();", program_btn)
-        time.sleep(2)
         program_btn.click()
-        print("Program izbran!")
+        print("Program kliknjen.")
         
-        # Počakamo, da se AJAX urnik naloži
-        time.sleep(5)
+        time.sleep(5) # Počakamo na AJAX
         
-        # 2. Klik na gumb iCal-vse
-        print("Iščem gumb: iCal-vse")
-        # Iščemo gumb, ki ima v sebi besedilo 'iCal-vse'
-        ical_xpath = "//button[contains(., 'iCal-vse')]"
+        # SLIKAJ ZASLON (za vsak slučaj, da vidiva kaj se dogaja)
+        driver.save_screenshot("debug_screen.png")
+
+        # 2. Iskanje gumba iCal-vse
+        print("Iščem gumb iCal-vse...")
+        # Včasih je gumb v bistvu 'span' znotraj gumba, zato iščeva po tekstu kjerkoli
+        ical_xpath = "//*[contains(text(), 'iCal-vse')]"
         ical_btn = wait.until(EC.element_to_be_clickable((By.XPATH, ical_xpath)))
-        
-        driver.execute_script("arguments[0].scrollIntoView();", ical_btn)
-        time.sleep(2)
         ical_btn.click()
-        print("Gumb iCal-vse kliknjen! Čakam na prenos...")
+        print("Gumb kliknjen.")
         
-        # Počakamo na prenos (na GitHubu lahko traja malo dlje)
-        time.sleep(15)
+        time.sleep(15) # Čas za prenos
         
-        # 3. Preimenovanje datoteke
         files = os.listdir(download_path)
-        print(f"Najdene datoteke v mapi: {files}")
-        
         for file in files:
             if file.endswith(".ics"):
-                old_path = os.path.join(download_path, file)
-                new_path = os.path.join(download_path, "urnik.ics")
-                if os.path.exists(new_path):
-                    os.remove(new_path)
-                os.rename(old_path, new_path)
-                print(f"USPEH: Datoteka {file} je zdaj urnik.ics")
+                os.rename(os.path.join(download_path, file), "urnik.ics")
+                print("USPEH!")
                 return True
-                
-        print("NAPAKA: Nobena .ics datoteka ni bila prenesena.")
+        
+        print("Ni bilo .ics datoteke.")
         return False
 
     except Exception as e:
         print(f"Napaka: {e}")
-        # Ustvarimo datoteko, da preprečimo exit code 128
-        with open("urnik.ics", "w") as f: f.write("error")
+        driver.save_screenshot("error_screen.png")
+        with open("urnik.ics", "w") as f: f.write(f"Napaka: {e}")
         return False
     finally:
         driver.quit()
