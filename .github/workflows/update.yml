@@ -1,0 +1,22 @@
+name: Osvezi Urnik
+on:
+  schedule:
+    - cron: '0 * * * *' # Teče vsako uro
+  workflow_dispatch: # Omogoči ročni zagon
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install requests
+      - run: python scraper.py
+      - run: |
+          git config --global user.name 'UrnikBot'
+          git config --global user.email 'bot@noreply.com'
+          git add urnik.ics
+          git commit -m "Posodobitev urnika" || exit 0
+          git push
