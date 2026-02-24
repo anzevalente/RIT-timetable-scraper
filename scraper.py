@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 def download_urnik():
     chrome_options = Options()
@@ -20,44 +21,53 @@ def download_urnik():
     driver = webdriver.Chrome(options=chrome_options)
     
     try:
+        print("Odpiram Wise Timetable...")
         driver.get("https://wise-tt.com/wtt_um_feri/")
-        wait = WebDriverWait(driver, 25)
+        wait = WebDriverWait(driver, 30)
         
-        # 1. Iskanje programa - uporabila bova blažji filter
-        print("Iščem program...")
-        program_xpath = "//td[contains(text(), 'RAČUNALNIŠTVO') and contains(text(), 'BV20')]"
-        program_btn = wait.until(EC.element_to_be_clickable((By.XPATH, program_xpath)))
-        program_btn.click()
-        print("Program kliknjen.")
+        # 1. Najprej kliknemo na prvi dropdown (tisti oranžni na tvoji sliki)
+        print("Odpiram dropdown meni za Program...")
+        # Iščemo puščico prvega dropdowna
+        dropdown_arrow = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "ui-selectonemenu-trigger")))
+        dropdown_arrow.click()
+        time.sleep(2)
         
-        time.sleep(5) # Počakamo na AJAX
+        # 2. Zdaj ko je meni odprt, poiščemo tvoj program
+        print("Iščem: RAČUNALNIŠTVO IN INFORMACIJSKE TEHNOLOGIJE VS (BV20)")
+        # Uporabimo XPATH, ki najde 'li' element (seznam), ki vsebuje tvoj program
+        program_xpath = "//li[contains(text(), 'RAČUNALNIŠTVO IN INFORMACIJSKE TEHNOLOGIJE VS (BV20)')]"
+        program_item = wait.until(EC.presence_of_element_located((By.XPATH, program_xpath)))
         
-        # SLIKAJ ZASLON (za vsak slučaj, da vidiva kaj se dogaja)
-        driver.save_screenshot("debug_screen.png")
-
-        # 2. Iskanje gumba iCal-vse
-        print("Iščem gumb iCal-vse...")
-        # Včasih je gumb v bistvu 'span' znotraj gumba, zato iščeva po tekstu kjerkoli
-        ical_xpath = "//*[contains(text(), 'iCal-vse')]"
-        ical_btn = wait.until(EC.element_to_be_clickable((By.XPATH, ical_xpath)))
-        ical_btn.click()
-        print("Gumb kliknjen.")
+        # Ker je seznam morda dolg, Seleniumu rečemo, naj se "skrola" do njega
+        driver.execute_script("arguments[0].scrollIntoView(true);", program_item)
+        time.sleep(1)
+        driver.execute_script("arguments[0].click();", program_item)
+        print("Program izbran!")
         
-        time.sleep(15) # Čas za prenos
+        time.sleep(5) # Čakamo, da se tabela osveži
         
+        # 3. Klik na iCal-vse
+        print("Klikam iCal-vse...")
+        ical_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'iCal-vse')]")))
+        driver.execute_script("arguments[0].click();", ical_btn)
+        
+        print("Čakam na prenos...")
+        time.sleep(15)
+        
+        # 4. Preveri datoteko
         files = os.listdir(download_path)
         for file in files:
             if file.endswith(".ics"):
+                if os.path.exists("urnik.ics"): os.remove("urnik.ics")
                 os.rename(os.path.join(download_path, file), "urnik.ics")
-                print("USPEH!")
+                print("ZMAGA!")
                 return True
         
-        print("Ni bilo .ics datoteke.")
         return False
 
     except Exception as e:
         print(f"Napaka: {e}")
-        driver.save_screenshot("error_screen.png")
+        driver.save_screenshot("dropdown_error.png")
         with open("urnik.ics", "w") as f: f.write(f"Napaka: {e}")
         return False
     finally:
