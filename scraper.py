@@ -1,6 +1,5 @@
 import os
 import time
-import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -8,7 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 def fix_ical_content(filepath):
-    """Funkcija, ki premakne podrobnosti iz opisa v naslov dogodka."""
+    """Funkcija, ki združi podatke v pregleden naslov: PREDMET | TIP | PROFESOR | PROSTOR"""
     if not os.path.exists(filepath):
         return
     
@@ -17,32 +16,32 @@ def fix_ical_content(filepath):
 
     new_lines = []
     current_summary = ""
+    summary_index = -1
     
-    for i in range(len(lines)):
-        line = lines[i]
-        
-        # Najdemo naslov (SUMMARY)
+    for line in lines:
         if line.startswith("SUMMARY:"):
             current_summary = line.replace("SUMMARY:", "").strip()
-            new_lines.append(line) # Začasno dodamo, popravili bomo ko pridemo do opisa
+            new_lines.append(line)
             summary_index = len(new_lines) - 1
             
-        # Najdemo opis (DESCRIPTION), kjer se skrivajo profesor, prostor itd.
-        elif line.startswith("DESCRIPTION:") and current_summary:
+        elif line.startswith("DESCRIPTION:") and summary_index != -1:
             description = line.replace("DESCRIPTION:", "").strip()
-            # Očistimo opis čudnih znakov (\n, \t)
-            clean_info = description.replace("\\n", ", ").replace("\\t", " ").strip()
+            # Očistimo opis in zamenjamo vejice/nove vrstice z navpičnico
+            # Wise-tt v opisu običajno ločuje podatke z \n
+            details = description.replace("\\n", " | ").replace("\\t", " ").strip()
             
-            # Sestavimo nov, bogat naslov: Predmet, Tip, Profesor, Učilnica
-            # Outlook bo zdaj prikazal vse to hkrati
-            new_summary = f"SUMMARY:{current_summary}, {clean_info}\r\n"
+            # Sestavimo nov naslov: IME PREDMETA | OSTALI PODATKI
+            new_summary = f"SUMMARY:{current_summary} | {details}\r\n"
             new_lines[summary_index] = new_summary
             new_lines.append(line)
+            summary_index = -1 # Resetiramo za naslednji dogodek
         else:
             new_lines.append(line)
 
     with open(filepath, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
+
+# --- OSTALI DEL KODE OSTANE ISTI KOT PREJ ---
 
 def download_urnik():
     chrome_options = Options()
@@ -60,7 +59,6 @@ def download_urnik():
         driver.get("https://wise-tt.com/wtt_um_feri/")
         wait = WebDriverWait(driver, 30)
         
-        # 1. Klik na dropdown in izbira programa
         dropdown_arrow = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "ui-selectonemenu-trigger")))
         dropdown_arrow.click()
         time.sleep(2)
@@ -73,22 +71,18 @@ def download_urnik():
         
         time.sleep(5)
         
-        # 2. Klik na iCal-vse
         ical_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'iCal-vse')]")))
         driver.execute_script("arguments[0].click();", ical_btn)
         
         time.sleep(15)
         
-        # 3. Obdelava datoteke
         for file in os.listdir(download_path):
             if file.endswith(".ics"):
                 target = "urnik.ics"
                 if os.path.exists(target): os.remove(target)
                 os.rename(os.path.join(download_path, file), target)
-                
-                # KLJUČNI KORAK: Popravi vsebino, da bo več informacij v naslovu
                 fix_ical_content(target)
-                print("Urnik uspešno prenesen in obdelan!")
+                print("Urnik uspesno posodobljen z lepsimi naslovi!")
                 return True
         return False
     except Exception as e:
